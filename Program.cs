@@ -35,11 +35,8 @@ class Program
 
     public static void CreateImage()
     {
-        Vector2Int dimmensions = new Vector2Int(64, 64);
+        Vector2Int dimmensions = new Vector2Int(128, 128);
         Color[,] image = new Color[dimmensions._x, dimmensions._y];
-
-        Console.WriteLine($"dims: {dimmensions._x}, {dimmensions._y}");
-        Console.WriteLine($"image: {image.GetLength(0)}, {image.GetLength(1)}");
 
         // Iterate down the rows
         for (int y = 0; y < dimmensions._y; y++)
@@ -47,9 +44,9 @@ class Program
             // Iterate across the cols
             for (int x = 0; x < dimmensions._x; x++)
             {
-                // float red = 1.0f;
-                // float green = 0.0f;
-                image[x, y] = new Color(1f, 0, 0);
+                float red = x / (image.GetLength(0) - 1f);
+                float green = y / (image.GetLength(1) - 1f);
+                image[x, y] = new Color(red, green, 0);
             }
         }
 
@@ -75,38 +72,43 @@ class Program
         using FileStream stream = new FileStream(filename, FileMode.Create);
         using BinaryWriter writer = new BinaryWriter(stream);
 
-        // Get the File Byte Size
+        // Each pixel row needs to be a power of 4 (1, 4, 8, 12, 16, ...)
+        // So we will get the size of each row by considering the image width and padding needed
+        int paddedRowSizeInBytes = Power4(image.GetLength(0) * 3);
+
+        // The image size is the padded size multiplyied by the number of rows
+        int imageSizeInBytes = image.GetLength(1) * paddedRowSizeInBytes;
+        Console.WriteLine($"Pixel Size: {imageSizeInBytes}");
+
         // Header + DIB Header + Pixel Data (Each y in the image will need be padded by 4 bytes, ex: pixel rows * 4)
-        int paddedWidth = Power4(image.GetLength(0) * 3);
-        int pixelSize = image.GetLength(1) * paddedWidth;
-        Console.WriteLine($"Pixel Size: {pixelSize}");
-        uint[] byteCounts = {14, 40, (uint)pixelSize};
+        uint[] totalByteCount = {14, 40, (uint)imageSizeInBytes};
         
         Console.WriteLine($"Image Size: width={image.GetLength(0)}, height{image.GetLength(1)}");
-        Console.WriteLine($"Byte Counts: {byteCounts[0]} {byteCounts[1]} {byteCounts[2]}");
+        Console.WriteLine($"Byte Counts: {totalByteCount[0]} {totalByteCount[1]} {totalByteCount[2]}");
 
-        // Write the headers to the file
+        // Standard Header
         writer.Write("BM"u8.ToArray()); // Signature BM
-        writer.Write(byteCounts[0] + byteCounts[1] + byteCounts[2]); // Total File Size
+        writer.Write(totalByteCount[0] + totalByteCount[1] + totalByteCount[2]); // Total File Size
         writer.Write((ushort)0); // Unused
         writer.Write((ushort)0); // Unused
-        writer.Write(byteCounts[0] + byteCounts[1]); // Offset to pixel data
+        writer.Write(totalByteCount[0] + totalByteCount[1]); // Offset to pixel data
 
         // DIB Header
-        writer.Write(byteCounts[1]); // DIB Header Size
+        writer.Write(totalByteCount[1]); // DIB Header Size
         writer.Write((uint)image.GetLength(0)); // Image Width
         writer.Write((uint)image.GetLength(1)); // Image Height
         writer.Write((ushort)1); // Number of planes being used
         writer.Write((short)(24)); // Number of bits per pixel
         writer.Write((uint)0); // Compresssion
-        writer.Write(byteCounts[2]); // The image size
+        writer.Write(totalByteCount[2]); // The image size
         writer.Write((uint)0); // Pixel per X meter (DPI) | ignore for now
         writer.Write((uint)0); // Pixel per Y meter (DPI) | ignore for now
         writer.Write((uint)0); // Number of colors in the pallete
         writer.Write((uint)0); // Number of important colors (0 means all colors are important)
 
-        // Pixel Data
-        int paddingSize = Power4(image.GetLength(0) * 3) - (image.GetLength(0) * 3);
+        // Get the size of the padding appending to each row of pixels
+        int paddingSizeInBytes = paddedRowSizeInBytes - (image.GetLength(0) * 3);
+        // Loop through all the pixels
         for(int y = image.GetLength(1) - 1; y >= 0; y--)
         {
             for(int x = 0; x < image.GetLength(0); x++)
@@ -116,15 +118,10 @@ class Program
                 writer.Write((byte) (pixel._green * 255));
                 writer.Write((byte) (pixel._red * 255));
             }
-            writer.Write(new Byte[paddingSize]);
+            writer.Write(new Byte[paddingSizeInBytes]);
         }
 
         // Close the file
         stream.Close();
-
-        var hexBytes = File.ReadAllBytes(filename);
-        string hexString = BitConverter.ToString(hexBytes).Replace("-", "");;
-        // Console.WriteLine($"{hexString}");
-        // Console.WriteLine($"424D7A000000000000007A0000006C000000380000000300000003000000010018000000000000000000130B0000130B00000000000000000000FF0000FF0000FF000000FF0000FF0000FF000000FF0000FF0000FF00");
     }
 }
