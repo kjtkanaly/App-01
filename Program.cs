@@ -33,6 +33,8 @@ class Program
         CreateImage();
     }
 
+    // ------------------------------------------------------------------------
+    // Image Wrtier Stuff
     public static void CreateImage()
     {
         Vector2Int dimmensions = new Vector2Int(128, 128);
@@ -52,18 +54,6 @@ class Program
 
         // Write the image file
         WriteImageToFile(image, "test.bmp");
-    }
-
-    public static int Power4(int value)
-    {
-        int power = value;
-        while (power % 4 != 0)
-        {
-            power++; 
-        }
-
-        Console.WriteLine($"Value: {value} | Power: {power}");
-        return power;
     }
 
     public static void WriteImageToFile(Color[,] image, string filename)
@@ -123,5 +113,19 @@ class Program
 
         // Close the file
         stream.Close();
+    }
+
+    // ------------------------------------------------------------------------
+    // Utilites
+    public static int Power4(int value)
+    {
+        int power = value;
+        while (power % 4 != 0)
+        {
+            power++; 
+        }
+
+        Console.WriteLine($"Value: {value} | Power: {power}");
+        return power;
     }
 }
