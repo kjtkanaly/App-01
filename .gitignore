@@ -1,6 +1,9 @@
 # Ignore the data file
 data/
 
+# Ignore my notes file
+Notes.md
+
 ## Build results
 bin/
 obj/
