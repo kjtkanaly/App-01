@@ -24,6 +24,23 @@ public struct Vector2Int
         _x = x;
         _y = y;
     }
+
+    public static Vector2Int operator -(Vector2Int a, Vector2Int b)
+    {
+        return new Vector2Int(
+            a._x - b._x,
+            a._y - b._y);
+    }
+
+    public static int Dot(Vector2Int a, Vector2Int b)
+    {
+        return a._x * b._x + a._y * b._y;
+    }
+
+    public static Vector2Int GetPerpendicular(Vector2Int vec)
+    {
+        return new Vector2Int(vec._y, -vec._x);
+    }
 }
 
 class Program
@@ -33,27 +50,82 @@ class Program
         CreateImage();
     }
 
-    // ------------------------------------------------------------------------
+    // --------------------------------------------------------------------- //
     // Image Wrtier Stuff
     public static void CreateImage()
     {
         Vector2Int dimmensions = new Vector2Int(128, 128);
         Color[,] image = new Color[dimmensions._x, dimmensions._y];
 
+        Vector2Int a = new Vector2Int(
+            (int) (image.GetLength(0) * 0.1), 
+            (int)( image.GetLength(1) * 0.8));
+        Vector2Int b = new Vector2Int(
+            (int) (image.GetLength(0) * 0.4), 
+            (int)( image.GetLength(1) * 0.2));
+        Vector2Int c = new Vector2Int(
+            (int) (image.GetLength(0) * 0.8), 
+            (int)( image.GetLength(1) * 0.7));
+
+        AddTriangleToImage(image, a, b, c, new Color(1f, 0, 0));
+
+        a = new Vector2Int(
+            (int) (image.GetLength(0) * 0.1), 
+            (int)( image.GetLength(1) * 0.1));
+        b = new Vector2Int(
+            (int) (image.GetLength(0) * 0.4), 
+            (int)( image.GetLength(1) * 0.8));
+        c = new Vector2Int(
+            (int) (image.GetLength(0) * 0.8), 
+            (int)( image.GetLength(1) * 0.1));
+
+        AddTriangleToImage(image, a, b, c, new Color(0, 0, 1f));
+
+        // Write the image file
+        WriteImageToFile(image, "test.bmp");
+    }
+
+    // Used to generate the default red/green fade texture 
+    private static void DefaultTexture(Color[,] image)
+    {
         // Iterate down the rows
-        for (int y = 0; y < dimmensions._y; y++)
+        for (int y = 0; y < image.GetLength(1); y++)
         {
             // Iterate across the cols
-            for (int x = 0; x < dimmensions._x; x++)
+            for (int x = 0; x < image.GetLength(0); x++)
             {
                 float red = x / (image.GetLength(0) - 1f);
                 float green = y / (image.GetLength(1) - 1f);
                 image[x, y] = new Color(red, green, 0);
             }
         }
+    }
+    
+    // Used to add a triangle to the scene
+    private static void AddTriangleToImage(
+        Color[,] image,
+        Vector2Int A,
+        Vector2Int B,
+        Vector2Int C,
+        Color color)
+    {
+        // Loop over the pixels in the image
+        for (int x = 0; x < image.GetLength(0); x++)
+        {
+            for (int y = 0; y < image.GetLength(1); y++)
+            {
+                bool isInside = UsefulMath.IsInsideTriangle(
+                    A, 
+                    B, 
+                    C, 
+                    new Vector2Int(x, y));
 
-        // Write the image file
-        WriteImageToFile(image, "test.bmp");
+                if (isInside)
+                {
+                    image[x, y] = color;
+                }
+            }
+        }
     }
 
     public static void WriteImageToFile(Color[,] image, string filename)
@@ -64,7 +136,7 @@ class Program
 
         // Each pixel row needs to be a power of 4 (1, 4, 8, 12, 16, ...)
         // So we will get the size of each row by considering the image width and padding needed
-        int paddedRowSizeInBytes = Power4(image.GetLength(0) * 3);
+        int paddedRowSizeInBytes = UsefulMath.Power4(image.GetLength(0) * 3);
 
         // The image size is the padded size multiplyied by the number of rows
         int imageSizeInBytes = image.GetLength(1) * paddedRowSizeInBytes;
@@ -115,17 +187,46 @@ class Program
         stream.Close();
     }
 
-    // ------------------------------------------------------------------------
+    // --------------------------------------------------------------------- //
     // Utilites
-    public static int Power4(int value)
+    public static class UsefulMath
     {
-        int power = value;
-        while (power % 4 != 0)
+        public static int Power4(int value)
         {
-            power++; 
+            int power = value;
+            while (power % 4 != 0)
+            {
+                power++; 
+            }
+
+            Console.WriteLine($"Value: {value} | Power: {power}");
+            return power;
         }
 
-        Console.WriteLine($"Value: {value} | Power: {power}");
-        return power;
+       public static bool IsInsideTriangle(
+            Vector2Int A,
+            Vector2Int B,
+            Vector2Int C,
+            Vector2Int P)
+       {
+           // Define our triangle vectors AB, BC, CA
+           Vector2Int AB = B - A;
+           Vector2Int BC = C - B;
+           Vector2Int CA = A - C;
+
+           // Define our point vectors AP, BP, CP
+           Vector2Int AP = P - A;
+           Vector2Int BP = P - B;
+           Vector2Int CP = P - C;
+
+           // Get the sign the dot prodcuts for each point vector and the coresponding triangle vector
+           int APxAB = Math.Sign(Vector2Int.Dot(AP, Vector2Int.GetPerpendicular(AB)));
+           int BPxBC = Math.Sign(Vector2Int.Dot(BP, Vector2Int.GetPerpendicular(BC)));
+           int CPxCA = Math.Sign(Vector2Int.Dot(CP, Vector2Int.GetPerpendicular(CA)));
+
+           // Check if all three dot products are equal in sign,
+           // thus implying the point is "inside" the triangle space
+           return APxAB == BPxBC && BPxBC == CPxCA;
+       }
     }
 }
