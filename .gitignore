@@ -4,6 +4,12 @@ data/
 # Ignore my notes file
 Notes.md
 
+# Ignore my TODO file
+TODO.md
+
+# Ignore the .bmp files
+*.bmp
+
 ## Build results
 bin/
 obj/
