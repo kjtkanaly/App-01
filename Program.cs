@@ -1,123 +1,7 @@
 ﻿using System.Diagnostics;
+using MyUtils;
 
 namespace App_01;
-
-public struct Color
-{
-    public float _red {get; set;}
-    public float _green {get; set;}
-    public float _blue {get; set;}
-
-    public Color(float x, float y, float z)
-    {
-        _red = x;
-        _green = y;
-        _blue = z;
-    }
-}
-
-public struct Vector2
-{
-    public double _x {get; set;}
-    public double _y {get; set;}
-
-    public Vector2(double x, double y)
-    {
-        _x = x;
-        _y = y;
-    }
-
-    public static Vector2 operator -(Vector2 a, Vector2 b)
-    {
-        return new Vector2(
-            a._x - b._x,
-            a._y - b._y);
-    }
-
-    public static Vector2 operator *(Vector2 a, double val)
-    {
-        return new Vector2(a._x * val, a._y * val);
-    }
-
-    public static Vector2 operator +(Vector2 a, Vector2 b)
-    {
-        return new Vector2(a._x + b._x, a._y + b._y);
-    }
-
-    public static implicit operator Vector2Int(Vector2 vect)
-    {
-        return new Vector2Int((int) vect._x, (int) vect._y);
-    }
-
-    public static double Dot(Vector2 a, Vector2 b)
-    {
-        return a._x * b._x + a._y * b._y;
-    }
-
-    public static Vector2 GetPerpendicular(Vector2 vec)
-    {
-        return new Vector2(vec._y, -vec._x);
-    }
-}
-
-public struct Vector2Int
-{
-    public int _x {get; set;}
-    public int _y {get; set;}
-
-    public Vector2Int(int x, int y)
-    {
-        _x = x;
-        _y = y;
-    }
-
-    public static Vector2Int operator -(Vector2Int a, Vector2Int b)
-    {
-        return new Vector2Int(
-            a._x - b._x,
-            a._y - b._y);
-    }
-
-    public static Vector2Int operator *(Vector2Int vec, double scale)
-    {
-        return new Vector2Int(
-            (int) (vec._x * scale),
-            (int) (vec._y * scale));
-    }
-
-    public static int Dot(Vector2Int a, Vector2Int b)
-    {
-        return a._x * b._x + a._y * b._y;
-    }
-
-    public static Vector2Int GetPerpendicular(Vector2Int vec)
-    {
-        return new Vector2Int(vec._y, -vec._x);
-    }
-}
-
-public struct Triangle
-{
-    public Vector2[] _points = new Vector2[3];
-    public Color _color = new Color();
-    public Vector2[] _velocity = new Vector2[3];
-
-    public Triangle(
-        Vector2 a, 
-        Vector2 b, 
-        Vector2 c,
-        Color color = new Color(),
-        Vector2 velocity = new Vector2())
-    {
-        _points[0] = a;
-        _points[1] = b;
-        _points[2] = c;
-        _color = color;
-        _velocity[0] = velocity;
-        _velocity[1] = velocity;
-        _velocity[2] = velocity;
-    }
-}
 
 // ----------------------------------------------------------------------------
 // Main Program Class
@@ -316,6 +200,29 @@ class Program
 
     // ------------------------------------------------------------------------
     // Triangle Stuff
+    public struct Triangle
+    {
+        public Vector2[] _points = new Vector2[3];
+        public Color _color = new Color();
+        public Vector2[] _velocity = new Vector2[3];
+
+        public Triangle(
+                Vector2 a, 
+                Vector2 b, 
+                Vector2 c,
+                Color color = new Color(),
+                Vector2 velocity = new Vector2())
+        {
+            _points[0] = a;
+            _points[1] = b;
+            _points[2] = c;
+            _color = color;
+            _velocity[0] = velocity;
+            _velocity[1] = velocity;
+            _velocity[2] = velocity;
+        }
+    }
+
     public static void InitRandomTriangleStates(
             Triangle[] triangles,
             Vector2Int spawnOffset,
@@ -383,7 +290,7 @@ class Program
             {
                 for (int y = 0; y < image.GetLength(1); y++)
                 {
-                    bool isInside = UsefulMath.IsInsideTriangle(
+                    bool isInside = IsInsideTriangle(
                             A, 
                             B, 
                             C, 
@@ -431,6 +338,32 @@ class Program
             }
         }
     }
+
+    public static bool IsInsideTriangle(
+            Vector2Int A,
+            Vector2Int B,
+            Vector2Int C,
+            Vector2Int P)
+    {
+        // Define our triangle vectors AB, BC, CA
+        Vector2Int AB = B - A;
+        Vector2Int BC = C - B;
+        Vector2Int CA = A - C;
+
+        // Define our point vectors AP, BP, CP
+        Vector2Int AP = P - A;
+        Vector2Int BP = P - B;
+        Vector2Int CP = P - C;
+
+        // Get the sign the dot prodcuts for each point vector and the coresponding triangle vector
+        int APxAB = Math.Sign(Vector2Int.Dot(AP, Vector2Int.GetPerpendicular(AB)));
+        int BPxBC = Math.Sign(Vector2Int.Dot(BP, Vector2Int.GetPerpendicular(BC)));
+        int CPxCA = Math.Sign(Vector2Int.Dot(CP, Vector2Int.GetPerpendicular(CA)));
+
+        // Check if all three dot products are equal in sign,
+        // thus implying the point is "inside" the triangle space
+        return APxAB == BPxBC && BPxBC == CPxCA;
+    }
     
     // ------------------------------------------------------------------------
     // Utilites
@@ -451,30 +384,5 @@ class Program
             return power;
         }
 
-       public static bool IsInsideTriangle(
-            Vector2Int A,
-            Vector2Int B,
-            Vector2Int C,
-            Vector2Int P)
-       {
-           // Define our triangle vectors AB, BC, CA
-           Vector2Int AB = B - A;
-           Vector2Int BC = C - B;
-           Vector2Int CA = A - C;
-
-           // Define our point vectors AP, BP, CP
-           Vector2Int AP = P - A;
-           Vector2Int BP = P - B;
-           Vector2Int CP = P - C;
-
-           // Get the sign the dot prodcuts for each point vector and the coresponding triangle vector
-           int APxAB = Math.Sign(Vector2Int.Dot(AP, Vector2Int.GetPerpendicular(AB)));
-           int BPxBC = Math.Sign(Vector2Int.Dot(BP, Vector2Int.GetPerpendicular(BC)));
-           int CPxCA = Math.Sign(Vector2Int.Dot(CP, Vector2Int.GetPerpendicular(CA)));
-
-           // Check if all three dot products are equal in sign,
-           // thus implying the point is "inside" the triangle space
-           return APxAB == BPxBC && BPxBC == CPxCA;
-       }
     }
 }
