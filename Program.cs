@@ -80,7 +80,7 @@ class Program
         }
 
         // Create the frame object
-        Color[,] frame = new Color[resolution._x, resolution._y];
+        Color[,] frame = new Color[resolution.X, resolution.Y];
 
         // Useful debug variables
         int paddingSize = totalFrameCount.ToString().Length;
@@ -91,7 +91,7 @@ class Program
         for (int i = 0; i < totalFrameCount; i++)
         {
             // Clear the frame for the new data
-            frame = new Color[resolution._x, resolution._y];
+            frame = new Color[resolution.X, resolution.Y];
             
             if (debug)
             {
@@ -187,9 +187,9 @@ class Program
             for(int x = 0; x < image.GetLength(0); x++)
             {
                 Color pixel = image[x, y];
-                writer.Write((byte) (pixel._blue * 255));
-                writer.Write((byte) (pixel._green * 255));
-                writer.Write((byte) (pixel._red * 255));
+                writer.Write((byte) (pixel.Blue * 255));
+                writer.Write((byte) (pixel.Green * 255));
+                writer.Write((byte) (pixel.Red * 255));
             }
             writer.Write(new Byte[paddingSizeInBytes]);
         }
@@ -236,14 +236,14 @@ class Program
         {
             // Generate random points for the triangle between 0 and the spawn bounds
             Vector2 a = new Vector2(
-                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
-                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
+                rng.Next(spawnOffset.X, spawnOffset.X + spawnSize.X),
+                rng.Next(spawnOffset.Y, spawnOffset.Y + spawnSize.Y));
             Vector2 b = new Vector2(
-                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
-                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
+                rng.Next(spawnOffset.X, spawnOffset.X + spawnSize.X),
+                rng.Next(spawnOffset.Y, spawnOffset.Y + spawnSize.Y));
             Vector2 c = new Vector2(
-                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
-                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
+                rng.Next(spawnOffset.X, spawnOffset.X + spawnSize.X),
+                rng.Next(spawnOffset.Y, spawnOffset.Y + spawnSize.Y));
 
             // Assign a random color
             Color color = new Color(
@@ -262,10 +262,10 @@ class Program
             if (debug)
             {
                 Console.WriteLine($"Triangle #{i}:");
-                Console.WriteLine($"    A:     {a._x}, {a._y}");
-                Console.WriteLine($"    B:     {b._x}, {b._y}");
-                Console.WriteLine($"    C:     {c._x}, {c._y}\n");
-                Console.WriteLine($"    Color: {color._red}, {color._green}, {color._blue}\n");
+                Console.WriteLine($"    A:     {a.X}, {a.Y}");
+                Console.WriteLine($"    B:     {b.X}, {b.Y}");
+                Console.WriteLine($"    C:     {c.X}, {c.Y}\n");
+                Console.WriteLine($"    Color: {color.Red}, {color.Green}, {color.Blue}\n");
             }
         }
     }
@@ -321,19 +321,19 @@ class Program
 
                 // If Any point is outside the bounds (OOB) then reflect it's velocity
                 bool isOutOfXBounds = 
-                    triangle._points[j]._x <= 0
-                    || triangle._points[j]._x >= bounds._x;
+                    triangle._points[j].X <= 0
+                    || triangle._points[j].X >= bounds.X;
                 if (isOutOfXBounds)
                 {
-                    triangle._velocity[j]._x *= -1;
+                    triangle._velocity[j].X *= -1;
                 }
 
                 bool isOutOfYBounds = 
-                    triangle._points[j]._y <= 0
-                    || triangle._points[j]._y >= bounds._y;
+                    triangle._points[j].Y <= 0
+                    || triangle._points[j].Y >= bounds.Y;
                 if (isOutOfYBounds)
                 {
-                    triangle._velocity[j]._y *= -1;
+                    triangle._velocity[j].Y *= -1;
                 }
             }
         }
