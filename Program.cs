@@ -18,10 +18,10 @@ public struct Color
 
 public struct Vector2
 {
-    public int _x {get; set;}
-    public int _y {get; set;}
+    public double _x {get; set;}
+    public double _y {get; set;}
 
-    public Vector2(int x, int y)
+    public Vector2(double x, double y)
     {
         _x = x;
         _y = y;
@@ -34,7 +34,22 @@ public struct Vector2
             a._y - b._y);
     }
 
-    public static int Dot(Vector2 a, Vector2 b)
+    public static Vector2 operator *(Vector2 a, double val)
+    {
+        return new Vector2(a._x * val, a._y * val);
+    }
+
+    public static Vector2 operator +(Vector2 a, Vector2 b)
+    {
+        return new Vector2(a._x + b._x, a._y + b._y);
+    }
+
+    public static implicit operator Vector2Int(Vector2 vect)
+    {
+        return new Vector2Int((int) vect._x, (int) vect._y);
+    }
+
+    public static double Dot(Vector2 a, Vector2 b)
     {
         return a._x * b._x + a._y * b._y;
     }
@@ -63,6 +78,13 @@ public struct Vector2Int
             a._y - b._y);
     }
 
+    public static Vector2Int operator *(Vector2Int vec, double scale)
+    {
+        return new Vector2Int(
+            (int) (vec._x * scale),
+            (int) (vec._y * scale));
+    }
+
     public static int Dot(Vector2Int a, Vector2Int b)
     {
         return a._x * b._x + a._y * b._y;
@@ -76,21 +98,24 @@ public struct Vector2Int
 
 public struct Triangle
 {
-    public Vector2Int[] _points = new Vector2Int[3];
+    public Vector2[] _points = new Vector2[3];
     public Color _color = new Color();
+    public Vector2[] _velocity = new Vector2[3];
 
     public Triangle(
-        Vector2Int a, 
-        Vector2Int b, 
-        Vector2Int c,
+        Vector2 a, 
+        Vector2 b, 
+        Vector2 c,
         Color color = new Color(),
-        Vector2Int velocity = new Vector2Int())
+        Vector2 velocity = new Vector2())
     {
         _points[0] = a;
         _points[1] = b;
         _points[2] = c;
-
         _color = color;
+        _velocity[0] = velocity;
+        _velocity[1] = velocity;
+        _velocity[2] = velocity;
     }
 }
 
@@ -98,48 +123,77 @@ public struct Triangle
 // Main Program Class
 class Program
 {
-    static void Main(string[] args)
+    static int Main(string[] args)
     {
-        GenerateAnimation();
+        // Clear the console window
+        Console.Clear();
+
+        // Generate the Animation
+        return GenerateAnimation();
     }
 
     // ------------------------------------------------------------------------
     // Animation Writer Stuff
-    public static void GenerateAnimation()
+    public static int GenerateAnimation()
     {
         string ffmpegExeName = "ffmpeg";
         string outputVideoPath = "Test.mp4";
         Vector2Int resolution = new Vector2Int(1024, 512);
         int frameRate = 30;
-        int totalFrameCount = 30;
-        int triangleCount = 3;
+        int duration = 30;
+        int totalFrameCount = frameRate * duration;
+        int triangleCount = 20;
+
+        // Define the spawning bounds via it's offset and size
+        Vector2Int spawnOffset = resolution * 0.25;
+        Vector2Int spawnSize = resolution * 0.5;
 
         // Create the array of triangles and init them with random states (pos & velocity)
         Triangle[] triangles = new Triangle[triangleCount];
-        InitRandomTriangleStates(triangles, resolution);
+        InitRandomTriangleStates(triangles, spawnOffset, spawnSize);
 
-        DrawFrames(resolution, totalFrameCount, triangles, true);
-
-        return;
+        DrawFrames(resolution, totalFrameCount, frameRate, triangles, true);
 
         // Init the video writer
         ProcessStartInfo processInfo = new ProcessStartInfo();
         processInfo.FileName = ffmpegExeName;
-        // processInfo.Arguments = $"-framerate {frameRate} -i \"{outputFolder}/frame%d.bmp\" -c:v libx264 -pix_fmt yuv420p -y \"{outputVideoPath}\"";
+        processInfo.Arguments = $"-framerate {frameRate} -i \"frames/frame-%d.bmp\" -vframes {totalFrameCount} -c:v libx264 -pix_fmt yuv420p -y \"{outputVideoPath}\"";
         processInfo.RedirectStandardOutput = true;
         processInfo.RedirectStandardError = true;
         processInfo.UseShellExecute = false;
         processInfo.CreateNoWindow = true;
+
+        using Process? process = Process.Start(processInfo);
+        if (process == null) return -1;
+
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"FFmpeg error: {error}");
+        }
+
+        // Delete the last progress message and print success
+        Console.WriteLine($"Video saved to {outputVideoPath}");
+        return 0;
     }
 
     public static void DrawFrames(
             Vector2Int resolution, 
             int totalFrameCount, 
+            int frameRate,
             Triangle[] objects,
             bool debug = false)
     {
         // Store the dir we store the frames in
         string frameDir = "frames/";
+
+        // Clear out any old frames
+        DirectoryInfo dirInfo = new DirectoryInfo(frameDir);
+        foreach (FileInfo fileInfo in dirInfo.GetFiles())
+        {
+            fileInfo.Delete();
+        }
 
         // Create the frame object
         Color[,] frame = new Color[resolution._x, resolution._y];
@@ -151,6 +205,9 @@ class Program
         // Loop until our count reaches the requested total frames
         for (int i = 0; i < totalFrameCount; i++)
         {
+            // Clear the frame for the new data
+            frame = new Color[resolution._x, resolution._y];
+            
             if (debug)
             {
                 Console.SetCursorPosition(cursorLeftPos, cursorTopPos);
@@ -158,7 +215,10 @@ class Program
             }
 
             // Iterate the scene to the next frame
-            PropogateObjectsToNextFrame(objects);
+            PropogateObjectsToNextFrame(
+                    objects, 
+                    1 / (double) frameRate, 
+                    resolution);
 
             // Draw the new frame
             // TODO: Create some sort of scene object
@@ -293,13 +353,13 @@ class Program
         for (int i = 0; i < triangleCount; i++)
         {
             // Generate random points for the triangle
-            Vector2Int a = new Vector2Int(
+            Vector2 a = new Vector2(
                 rng.Next(imageBounds._x),
                 rng.Next(imageBounds._y));
-            Vector2Int b = new Vector2Int(
+            Vector2 b = new Vector2(
                 rng.Next(imageBounds._x),
                 rng.Next(imageBounds._y));
-            Vector2Int c = new Vector2Int(
+            Vector2 c = new Vector2(
                 rng.Next(imageBounds._x),
                 rng.Next(imageBounds._y));
 
@@ -324,7 +384,8 @@ class Program
 
     public static void InitRandomTriangleStates(
             Triangle[] triangles,
-            Vector2Int spawnBounds,
+            Vector2Int spawnOffset,
+            Vector2Int spawnSize,
             bool debug=false)
     {
         // Make the Random Object
@@ -333,15 +394,15 @@ class Program
         for (int i = 0; i < triangles.Length; i++)
         {
             // Generate random points for the triangle between 0 and the spawn bounds
-            Vector2Int a = new Vector2Int(
-                rng.Next(spawnBounds._x),
-                rng.Next(spawnBounds._y));
-            Vector2Int b = new Vector2Int(
-                rng.Next(spawnBounds._x),
-                rng.Next(spawnBounds._y));
-            Vector2Int c = new Vector2Int(
-                rng.Next(spawnBounds._x),
-                rng.Next(spawnBounds._y));
+            Vector2 a = new Vector2(
+                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
+                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
+            Vector2 b = new Vector2(
+                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
+                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
+            Vector2 c = new Vector2(
+                rng.Next(spawnOffset._x, spawnOffset._x + spawnSize._x),
+                rng.Next(spawnOffset._y, spawnOffset._y + spawnSize._y));
 
             // Assign a random color
             Color color = new Color(
@@ -350,9 +411,9 @@ class Program
                 rng.Next(256) / 256f);
 
             // Generate a random velocity Vecotr2Int
-            Vector2Int velocity = new Vector2Int(
-                rng.Next(-10, 10), 
-                rng.Next(-10, 10));
+            Vector2 velocity = new Vector2(
+                rng.Next(-50, 50), 
+                rng.Next(-50, 50));
 
             // Init the new triangle object
             triangles[i] = new Triangle(a, b, c, color, velocity);
@@ -368,8 +429,38 @@ class Program
         }
     }
 
-    public static void PropogateObjectsToNextFrame(Triangle[] triangles)
+    public static void PropogateObjectsToNextFrame(
+            Triangle[] triangles, 
+            double timeDelta,
+            Vector2Int bounds)
     {
+        for (int i = 0; i < triangles.Length; i++)
+        {
+            Triangle triangle = triangles[i];
+
+            // Update the triangles's Position
+            for (int j = 0; j < triangle._points.Length; j++)
+            {
+                triangle._points[j] += triangle._velocity[j] * timeDelta;
+
+                // If Any point is outside the bounds (OOB) then reflect it's velocity
+                bool isOutOfXBounds = 
+                    triangle._points[j]._x <= 0
+                    || triangle._points[j]._x >= bounds._x;
+                if (isOutOfXBounds)
+                {
+                    triangle._velocity[j]._x *= -1;
+                }
+
+                bool isOutOfYBounds = 
+                    triangle._points[j]._y <= 0
+                    || triangle._points[j]._y >= bounds._y;
+                if (isOutOfYBounds)
+                {
+                    triangle._velocity[j]._y *= -1;
+                }
+            }
+        }
     }
 
     
@@ -378,9 +469,9 @@ class Program
         Color[,] image,
         Triangle triangle)
     {
-        Vector2Int A = triangle._points[0];
-        Vector2Int B = triangle._points[1];
-        Vector2Int C = triangle._points[2];
+        Vector2Int A = (Vector2Int) triangle._points[0];
+        Vector2Int B = (Vector2Int) triangle._points[1];
+        Vector2Int C = (Vector2Int) triangle._points[2];
         Color color = triangle._color;
 
         // Loop over the pixels in the image
