@@ -152,7 +152,7 @@ class Program
         Triangle[] triangles = new Triangle[triangleCount];
         InitRandomTriangleStates(triangles, spawnOffset, spawnSize);
 
-        DrawFrames(resolution, totalFrameCount, frameRate, triangles, true);
+        RenderFrames(resolution, totalFrameCount, frameRate, triangles, true);
 
         // Init the video writer
         ProcessStartInfo processInfo = new ProcessStartInfo();
@@ -178,7 +178,7 @@ class Program
         return 0;
     }
 
-    public static void DrawFrames(
+    public static void RenderFrames(
             Vector2Int resolution, 
             int totalFrameCount, 
             int frameRate,
@@ -198,6 +198,7 @@ class Program
         // Create the frame object
         Color[,] frame = new Color[resolution._x, resolution._y];
 
+        // Useful debug variables
         int paddingSize = totalFrameCount.ToString().Length;
         int cursorTopPos = Console.CursorTop;
         int cursorLeftPos = Console.CursorLeft;
@@ -215,41 +216,22 @@ class Program
             }
 
             // Iterate the scene to the next frame
-            PropogateObjectsToNextFrame(
+            PropogateTrianglesToNextFrame(
                     objects, 
                     1 / (double) frameRate, 
                     resolution);
 
             // Draw the new frame
             // TODO: Create some sort of scene object
-            DrawSceneOnFrame(frame, objects);
+            DrawTrianglesOnFrame(frame, objects);
             
             // Write the frame to the frameDir
             WriteImageToFile(frame, frameDir + $"frame-{i}.bmp");
         }
     }
 
-    public static void DrawSceneOnFrame(Color[,] frame, Triangle[] triangles)
-    {
-       for (int i = 0; i < triangles.Length; i++)
-       {
-           AddTriangleToImage(frame, triangles[i]);
-       }
-    }
-
     // ------------------------------------------------------------------------
     // Image Wrtier Stuff
-    public static void CreateTriangleTestImage()
-    {
-        Vector2Int dimmensions = new Vector2Int(1024, 512);
-        Color[,] image = new Color[dimmensions._x, dimmensions._y];
-
-        CreateTestTriangles(image, 3);
-
-        // Write the image file
-        WriteImageToFile(image, "test.bmp");
-    }
-
     // Used to generate the default red/green fade texture 
     private static void DefaultTexture(Color[,] image)
     {
@@ -333,55 +315,7 @@ class Program
     }
 
     // ------------------------------------------------------------------------
-    // Image Wrtier Stuff
-    // Used to generate a bunch of test triangles
-    private static void CreateTestTriangles( 
-        Color[,] image,
-        int triangleCount)
-    {
-        // Log the image bounds
-        Vector2Int imageBounds = new Vector2Int(
-            (int) image.GetLength(0),
-            (int) image.GetLength(1));
-
-        // Init the array of triangles
-        Triangle[] triangles = new Triangle[triangleCount];
-
-        // Make the Random Object
-        Random rng = new Random();
-
-        for (int i = 0; i < triangleCount; i++)
-        {
-            // Generate random points for the triangle
-            Vector2 a = new Vector2(
-                rng.Next(imageBounds._x),
-                rng.Next(imageBounds._y));
-            Vector2 b = new Vector2(
-                rng.Next(imageBounds._x),
-                rng.Next(imageBounds._y));
-            Vector2 c = new Vector2(
-                rng.Next(imageBounds._x),
-                rng.Next(imageBounds._y));
-
-            // Assign a random color
-            Color color = new Color(
-                rng.Next(256) / 256f,
-                rng.Next(256) / 256f,
-                rng.Next(256) / 256f);
-
-            // Init the new triangle object
-            triangles[i] = new Triangle(a, b, c, color);
-
-            Console.WriteLine($"Triangle #{i}:");
-            Console.WriteLine($"    A:     {a._x}, {a._y}");
-            Console.WriteLine($"    B:     {b._x}, {b._y}");
-            Console.WriteLine($"    C:     {c._x}, {c._y}\n");
-            Console.WriteLine($"    Color: {color._red}, {color._green}, {color._blue}\n");
-
-            AddTriangleToImage(image, triangles[i]);
-        }
-    }
-
+    // Triangle Stuff
     public static void InitRandomTriangleStates(
             Triangle[] triangles,
             Vector2Int spawnOffset,
@@ -429,7 +363,42 @@ class Program
         }
     }
 
-    public static void PropogateObjectsToNextFrame(
+    // Used to add a triangle to the scene
+    private static void DrawTrianglesOnFrame(
+            Color[,] image,
+            Triangle[] triangles)
+    {
+        // Loop over the triangles
+        for (int i = 0; i < triangles.Length; i++)
+        {
+            Triangle triangle = triangles[i];
+
+            Vector2Int A = (Vector2Int) triangle._points[0];
+            Vector2Int B = (Vector2Int) triangle._points[1];
+            Vector2Int C = (Vector2Int) triangle._points[2];
+            Color color = triangle._color;
+
+            // Loop over the pixels in the image
+            for (int x = 0; x < image.GetLength(0); x++)
+            {
+                for (int y = 0; y < image.GetLength(1); y++)
+                {
+                    bool isInside = UsefulMath.IsInsideTriangle(
+                            A, 
+                            B, 
+                            C, 
+                            new Vector2Int(x, y));
+
+                    if (isInside)
+                    {
+                        image[x, y] = color;
+                    }
+                }
+            }
+        }
+    }
+
+    public static void PropogateTrianglesToNextFrame(
             Triangle[] triangles, 
             double timeDelta,
             Vector2Int bounds)
@@ -462,38 +431,8 @@ class Program
             }
         }
     }
-
     
-    // Used to add a triangle to the scene
-    private static void AddTriangleToImage(
-        Color[,] image,
-        Triangle triangle)
-    {
-        Vector2Int A = (Vector2Int) triangle._points[0];
-        Vector2Int B = (Vector2Int) triangle._points[1];
-        Vector2Int C = (Vector2Int) triangle._points[2];
-        Color color = triangle._color;
-
-        // Loop over the pixels in the image
-        for (int x = 0; x < image.GetLength(0); x++)
-        {
-            for (int y = 0; y < image.GetLength(1); y++)
-            {
-                bool isInside = UsefulMath.IsInsideTriangle(
-                    A, 
-                    B, 
-                    C, 
-                    new Vector2Int(x, y));
-
-                if (isInside)
-                {
-                    image[x, y] = color;
-                }
-            }
-        }
-    }
-
-    // --------------------------------------------------------------------- //
+    // ------------------------------------------------------------------------
     // Utilites
     public static class UsefulMath
     {
