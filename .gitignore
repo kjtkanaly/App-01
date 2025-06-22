@@ -10,6 +10,9 @@ TODO.md
 # Ignore the .bmp files
 *.bmp
 
+# Ignore .mp4 files
+*.mp4
+
 ## Build results
 bin/
 obj/
